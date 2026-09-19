@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Large image datasets used for training. Keep these local and document
+# their expected folder structure in README.md instead of committing them.
+chest_xray/
+skin_cancer/
