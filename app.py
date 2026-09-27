@@ -464,40 +464,13 @@ header {
 
 /*
    Use Streamlit's native sidebar controls.
-   Only the control for the current sidebar state is visible.
+   When the sidebar is open, only the close button is shown.
+   When the sidebar is closed, only the open button is shown.
 */
 
 
 /* ---------------------------------------------------------
-   Sidebar OPEN:
-   Show only the close button.
-   Hide all expand/collapsed controls.
-   --------------------------------------------------------- */
-
-body:has([data-testid="stSidebar"][aria-expanded="true"])
-[data-testid="stExpandSidebarButton"],
-body:has([data-testid="stSidebar"][aria-expanded="true"])
-[data-testid="stSidebarCollapsedControl"],
-body:has([data-testid="stSidebar"][aria-expanded="true"])
-[data-testid="collapsedControl"] {
-    display: none !important;
-}
-
-
-/* ---------------------------------------------------------
-   Sidebar CLOSED:
-   Show only the expand button.
-   Hide the close button.
-   --------------------------------------------------------- */
-
-body:not(:has([data-testid="stSidebar"][aria-expanded="true"]))
-[data-testid="stSidebarCollapseButton"] {
-    display: none !important;
-}
-
-
-/* ---------------------------------------------------------
-   Native control wrappers
+   Base wrapper
    --------------------------------------------------------- */
 
 [data-testid="stSidebarCollapseButton"],
@@ -514,7 +487,46 @@ body:not(:has([data-testid="stSidebar"][aria-expanded="true"]))
 
 
 /* ---------------------------------------------------------
-   Actual button
+   SIDEBAR OPEN
+   Keep only the close control.
+   --------------------------------------------------------- */
+
+body:has([data-testid="stSidebar"][aria-expanded="true"])
+[data-testid="stExpandSidebarButton"],
+body:has([data-testid="stSidebar"][aria-expanded="true"])
+[data-testid="stSidebarCollapsedControl"],
+body:has([data-testid="stSidebar"][aria-expanded="true"])
+[data-testid="collapsedControl"] {
+    display: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   SIDEBAR CLOSED
+   Keep only the open control.
+   --------------------------------------------------------- */
+
+body:has([data-testid="stSidebar"][aria-expanded="false"])
+[data-testid="stSidebarCollapseButton"] {
+    display: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   If Streamlit does not expose aria-expanded,
+   the collapsed control remains available.
+   --------------------------------------------------------- */
+
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"],
+[data-testid="stExpandSidebarButton"] {
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+
+/* ---------------------------------------------------------
+   Actual visible button
    --------------------------------------------------------- */
 
 [data-testid="stSidebarCollapseButton"] button,
@@ -530,17 +542,17 @@ body:not(:has([data-testid="stSidebar"][aria-expanded="true"]))
     margin: 0 !important;
 
     background: var(--green-dark) !important;
+    color: #ffffff !important;
+
     border: 1px solid #5c8f87 !important;
     border-radius: 7px !important;
 
     box-shadow: none !important;
-    color: #ffffff !important;
+    outline: none !important;
 
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-
-    outline: none !important;
 }
 
 
@@ -599,10 +611,8 @@ body:not(:has([data-testid="stSidebar"][aria-expanded="true"]))
     [data-testid="stExpandSidebarButton"] button,
     [data-testid="stSidebarCollapsedControl"] button,
     [data-testid="collapsedControl"] button {
-
         width: 40px !important;
         height: 40px !important;
-
         min-width: 40px !important;
         min-height: 40px !important;
     }
