@@ -459,98 +459,79 @@ header {
 
 
 /* =========================================================
-   SINGLE SIDEBAR BUTTON
+   SIDEBAR BEHAVIOR
    ========================================================= */
 
 /*
-   Use Streamlit's native sidebar control.
+   DESKTOP / LAPTOP:
+   Keep the sidebar permanently visible.
+   No open/close button is shown.
 
-   IMPORTANT:
-   Do not force display, visibility, opacity, position,
-   or state on any sidebar-control wrapper.
-   Streamlit automatically shows the correct control:
-   close control when the sidebar is open,
-   open control when the sidebar is closed.
+   MOBILE:
+   Keep Streamlit's native open/close button available.
+   The sidebar can be opened and closed normally.
 */
 
 
 /* ---------------------------------------------------------
-   Style the native sidebar button only
+   DESKTOP / LAPTOP
    --------------------------------------------------------- */
 
-[data-testid="stSidebarCollapseButton"] button,
-[data-testid="stExpandSidebarButton"] button,
-[data-testid="stSidebarCollapsedControl"] button,
-[data-testid="collapsedControl"] button {
-    width: 44px !important;
-    height: 44px !important;
-    min-width: 44px !important;
-    min-height: 44px !important;
+@media (min-width: 701px) {
 
-    padding: 0 !important;
-    margin: 0 !important;
+    /*
+       Keep the sidebar visible.
+    */
 
-    background: var(--green-dark) !important;
-    color: #ffffff !important;
+    section[data-testid="stSidebar"] {
+        transform: translateX(0) !important;
+        visibility: visible !important;
+        width: 340px !important;
+        min-width: 340px !important;
+        max-width: 340px !important;
+    }
 
-    border: 1px solid #5c8f87 !important;
-    border-radius: 7px !important;
+    section[data-testid="stSidebar"] > div {
+        width: 340px !important;
+    }
 
-    box-shadow: none !important;
-    outline: none !important;
+    /*
+       Hide every native sidebar toggle on laptop/desktop.
+    */
+
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
 }
 
 
 /* ---------------------------------------------------------
-   Hover
-   --------------------------------------------------------- */
-
-[data-testid="stSidebarCollapseButton"] button:hover,
-[data-testid="stExpandSidebarButton"] button:hover,
-[data-testid="stSidebarCollapsedControl"] button:hover,
-[data-testid="collapsedControl"] button:hover {
-    background: var(--teal-dark) !important;
-    border-color: #82b6ad !important;
-}
-
-
-/* ---------------------------------------------------------
-   Focus
-   --------------------------------------------------------- */
-
-[data-testid="stSidebarCollapseButton"] button:focus,
-[data-testid="stExpandSidebarButton"] button:focus,
-[data-testid="stSidebarCollapsedControl"] button:focus,
-[data-testid="collapsedControl"] button:focus {
-    outline: none !important;
-    box-shadow: none !important;
-}
-
-
-/* ---------------------------------------------------------
-   Native icon
-   --------------------------------------------------------- */
-
-[data-testid="stSidebarCollapseButton"] button svg,
-[data-testid="stExpandSidebarButton"] button svg,
-[data-testid="stSidebarCollapsedControl"] button svg,
-[data-testid="collapsedControl"] button svg {
-    width: 21px !important;
-    height: 21px !important;
-
-    color: #ffffff !important;
-    fill: #ffffff !important;
-    stroke: #ffffff !important;
-
-    opacity: 1 !important;
-}
-
-
-/* ---------------------------------------------------------
-   Mobile
+   MOBILE
    --------------------------------------------------------- */
 
 @media (max-width: 700px) {
+
+    /*
+       Let Streamlit control the sidebar state on mobile.
+       Do not force display, visibility, position, or state.
+    */
+
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"] {
+        z-index: 999999 !important;
+    }
+
+    /*
+       Style the native mobile button.
+    */
 
     [data-testid="stSidebarCollapseButton"] button,
     [data-testid="stExpandSidebarButton"] button,
@@ -558,9 +539,68 @@ header {
     [data-testid="collapsedControl"] button {
         width: 40px !important;
         height: 40px !important;
-
         min-width: 40px !important;
         min-height: 40px !important;
+
+        padding: 0 !important;
+        margin: 0 !important;
+
+        background: var(--green-dark) !important;
+        color: #ffffff !important;
+
+        border: 1px solid #5c8f87 !important;
+        border-radius: 7px !important;
+
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    [data-testid="stSidebarCollapseButton"] button:hover,
+    [data-testid="stExpandSidebarButton"] button:hover,
+    [data-testid="stSidebarCollapsedControl"] button:hover,
+    [data-testid="collapsedControl"] button:hover {
+        background: var(--teal-dark) !important;
+        border-color: #82b6ad !important;
+    }
+
+    [data-testid="stSidebarCollapseButton"] button:focus,
+    [data-testid="stExpandSidebarButton"] button:focus,
+    [data-testid="stSidebarCollapsedControl"] button:focus,
+    [data-testid="collapsedControl"] button:focus {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    [data-testid="stSidebarCollapseButton"] button svg,
+    [data-testid="stExpandSidebarButton"] button svg,
+    [data-testid="stSidebarCollapsedControl"] button svg,
+    [data-testid="collapsedControl"] button svg {
+        width: 20px !important;
+        height: 20px !important;
+
+        color: #ffffff !important;
+        fill: #ffffff !important;
+        stroke: #ffffff !important;
+
+        opacity: 1 !important;
+    }
+}
+
+
+/* ---------------------------------------------------------
+   VERY SMALL MOBILE SCREENS
+   --------------------------------------------------------- */
+
+@media (max-width: 400px) {
+
+    [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="stExpandSidebarButton"] button,
+    [data-testid="stSidebarCollapsedControl"] button,
+    [data-testid="collapsedControl"] button {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        min-height: 38px !important;
     }
 }
 
