@@ -463,25 +463,21 @@ header {
    ========================================================= */
 
 /*
-   DESKTOP / LAPTOP:
-   Keep the sidebar permanently visible.
-   No open/close button is shown.
+   LAPTOP / DESKTOP:
+   Sidebar stays permanently open.
 
    MOBILE:
-   Keep Streamlit's native open/close button available.
-   The sidebar can be opened and closed normally.
+   Sidebar can be opened and closed.
+   When closed, a fixed open button remains visible outside
+   the sidebar so the user can bring the sidebar back.
 */
 
 
 /* ---------------------------------------------------------
-   DESKTOP / LAPTOP
+   LAPTOP / DESKTOP
    --------------------------------------------------------- */
 
 @media (min-width: 701px) {
-
-    /*
-       Keep the sidebar visible.
-    */
 
     section[data-testid="stSidebar"] {
         transform: translateX(0) !important;
@@ -494,10 +490,6 @@ header {
     section[data-testid="stSidebar"] > div {
         width: 340px !important;
     }
-
-    /*
-       Hide every native sidebar toggle on laptop/desktop.
-    */
 
     [data-testid="stSidebarCollapseButton"],
     [data-testid="stExpandSidebarButton"],
@@ -518,22 +510,83 @@ header {
 @media (max-width: 700px) {
 
     /*
-       Let Streamlit control the sidebar state on mobile.
-       Do not force display, visibility, position, or state.
+       The close button remains Streamlit's native button.
     */
 
-    [data-testid="stSidebarCollapseButton"],
-    [data-testid="stExpandSidebarButton"],
-    [data-testid="stSidebarCollapsedControl"],
-    [data-testid="collapsedControl"] {
+    [data-testid="stSidebarCollapseButton"] {
         z-index: 999999 !important;
     }
 
+    [data-testid="stSidebarCollapseButton"] button {
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+        min-height: 40px !important;
+
+        padding: 0 !important;
+        margin: 0 !important;
+
+        background: var(--green-dark) !important;
+        color: #ffffff !important;
+
+        border: 1px solid #5c8f87 !important;
+        border-radius: 7px !important;
+
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+
     /*
-       Style the native mobile button.
+       IMPORTANT:
+       When the sidebar is closed, Streamlit's native
+       expand control is moved outside the sidebar and
+       kept fixed on the screen.
     */
 
-    [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"] {
+        z-index: 2147483647 !important;
+    }
+
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"] {
+        position: fixed !important;
+        top: 12px !important;
+        left: 12px !important;
+
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+
+        pointer-events: auto !important;
+    }
+
+
+    /*
+       If the sidebar is open, hide the outside open button.
+       The native close button inside the sidebar remains.
+    */
+
+    body:has(section[data-testid="stSidebar"][aria-expanded="true"])
+    [data-testid="stExpandSidebarButton"],
+    body:has(section[data-testid="stSidebar"][aria-expanded="true"])
+    [data-testid="stSidebarCollapsedControl"],
+    body:has(section[data-testid="stSidebar"][aria-expanded="true"])
+    [data-testid="collapsedControl"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+
+
+    /*
+       Open button styling.
+    */
+
     [data-testid="stExpandSidebarButton"] button,
     [data-testid="stSidebarCollapsedControl"] button,
     [data-testid="collapsedControl"] button {
@@ -553,7 +606,16 @@ header {
 
         box-shadow: none !important;
         outline: none !important;
+
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
+
+
+    /*
+       Hover.
+    */
 
     [data-testid="stSidebarCollapseButton"] button:hover,
     [data-testid="stExpandSidebarButton"] button:hover,
@@ -563,6 +625,11 @@ header {
         border-color: #82b6ad !important;
     }
 
+
+    /*
+       Focus.
+    */
+
     [data-testid="stSidebarCollapseButton"] button:focus,
     [data-testid="stExpandSidebarButton"] button:focus,
     [data-testid="stSidebarCollapsedControl"] button:focus,
@@ -570,6 +637,11 @@ header {
         outline: none !important;
         box-shadow: none !important;
     }
+
+
+    /*
+       Icons.
+    */
 
     [data-testid="stSidebarCollapseButton"] button svg,
     [data-testid="stExpandSidebarButton"] button svg,
@@ -597,8 +669,10 @@ header {
     [data-testid="stExpandSidebarButton"] button,
     [data-testid="stSidebarCollapsedControl"] button,
     [data-testid="collapsedControl"] button {
+
         width: 38px !important;
         height: 38px !important;
+
         min-width: 38px !important;
         min-height: 38px !important;
     }
