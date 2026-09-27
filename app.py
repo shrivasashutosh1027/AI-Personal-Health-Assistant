@@ -463,70 +463,19 @@ header {
    ========================================================= */
 
 /*
-   Use Streamlit's native sidebar controls.
-   When the sidebar is open, only the close button is shown.
-   When the sidebar is closed, only the open button is shown.
+   Use Streamlit's native sidebar control.
+
+   IMPORTANT:
+   Do not force display, visibility, opacity, position,
+   or state on any sidebar-control wrapper.
+   Streamlit automatically shows the correct control:
+   close control when the sidebar is open,
+   open control when the sidebar is closed.
 */
 
 
 /* ---------------------------------------------------------
-   Base wrapper
-   --------------------------------------------------------- */
-
-[data-testid="stSidebarCollapseButton"],
-[data-testid="stExpandSidebarButton"],
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="collapsedControl"] {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    z-index: 999999 !important;
-}
-
-
-/* ---------------------------------------------------------
-   SIDEBAR OPEN
-   Keep only the close control.
-   --------------------------------------------------------- */
-
-body:has([data-testid="stSidebar"][aria-expanded="true"])
-[data-testid="stExpandSidebarButton"],
-body:has([data-testid="stSidebar"][aria-expanded="true"])
-[data-testid="stSidebarCollapsedControl"],
-body:has([data-testid="stSidebar"][aria-expanded="true"])
-[data-testid="collapsedControl"] {
-    display: none !important;
-}
-
-
-/* ---------------------------------------------------------
-   SIDEBAR CLOSED
-   Keep only the open control.
-   --------------------------------------------------------- */
-
-body:has([data-testid="stSidebar"][aria-expanded="false"])
-[data-testid="stSidebarCollapseButton"] {
-    display: none !important;
-}
-
-
-/* ---------------------------------------------------------
-   If Streamlit does not expose aria-expanded,
-   the collapsed control remains available.
-   --------------------------------------------------------- */
-
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="collapsedControl"],
-[data-testid="stExpandSidebarButton"] {
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-
-/* ---------------------------------------------------------
-   Actual visible button
+   Style the native sidebar button only
    --------------------------------------------------------- */
 
 [data-testid="stSidebarCollapseButton"] button,
@@ -549,10 +498,6 @@ body:has([data-testid="stSidebar"][aria-expanded="false"])
 
     box-shadow: none !important;
     outline: none !important;
-
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
 }
 
 
@@ -583,7 +528,7 @@ body:has([data-testid="stSidebar"][aria-expanded="false"])
 
 
 /* ---------------------------------------------------------
-   Icon
+   Native icon
    --------------------------------------------------------- */
 
 [data-testid="stSidebarCollapseButton"] button svg,
@@ -613,6 +558,7 @@ body:has([data-testid="stSidebar"][aria-expanded="false"])
     [data-testid="collapsedControl"] button {
         width: 40px !important;
         height: 40px !important;
+
         min-width: 40px !important;
         min-height: 40px !important;
     }
