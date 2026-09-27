@@ -1,752 +1,204 @@
-import os
-from pathlib import Path
-
 import streamlit as st
 import pandas as pd
 from PIL import Image
-
 import torch
 import torch.nn as nn
 from torchvision import models, transforms
-
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 
 
-# ============================================================
+# =========================================================
 # PAGE CONFIGURATION
-# ============================================================
+# =========================================================
 
 st.set_page_config(
-    page_title="AI 3-in-1 Health Care System",
+    page_title="CareSight | Health AI",
+    page_icon="+",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 
-# ============================================================
-# PATHS
-# ============================================================
+# =========================================================
+# GLOBAL SETTINGS
+# =========================================================
 
-BASE_DIR = Path(__file__).resolve().parent
-
-DATASET_FILE = BASE_DIR / "dataset.csv"
-DESCRIPTION_FILE = BASE_DIR / "symptom_Description.csv"
-PRECAUTION_FILE = BASE_DIR / "symptom_precaution.csv"
-
-PNEUMONIA_MODEL_FILE = BASE_DIR / "pneumonia_model.pth"
-SKIN_MODEL_FILE = BASE_DIR / "skin_cancer_model.pth"
-
-PROJECT_IMAGE = BASE_DIR / "ChatGPT Image Aug 28, 2025, 02_40_38 AM.png"
-
-
-# ============================================================
-# MODEL INFORMATION
-# ============================================================
+device = torch.device(
+    "cuda" if torch.cuda.is_available() else "cpu"
+)
 
 XRAY_MODEL_ACCURACY = "84.29%"
 SKIN_MODEL_ACCURACY = "74.47%"
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
-# ============================================================
-# CUSTOM CSS
-# ============================================================
-
-st.markdown(
-    """
-    <style>
-
-    /* ========================================================
-       GLOBAL
-       ======================================================== */
-
-    .stApp {
-        background-color: #f5f8f6;
-        color: #123b37;
-    }
-
-    .main .block-container {
-        max-width: 1400px;
-        padding-top: 2rem;
-        padding-bottom: 3rem;
-        padding-left: 3rem;
-        padding-right: 3rem;
-    }
-
-    h1, h2, h3, h4, h5, h6 {
-        color: #123b37 !important;
-    }
-
-    p {
-        color: #234d48;
-    }
-
-
-    /* ========================================================
-       SIDEBAR
-       ======================================================== */
-
-    section[data-testid="stSidebar"] {
-        background-color: #0b3d39 !important;
-        min-width: 280px !important;
-        max-width: 280px !important;
-    }
-
-    section[data-testid="stSidebar"] > div {
-        background-color: #0b3d39 !important;
-    }
-
-    section[data-testid="stSidebar"] * {
-        color: white;
-    }
-
-    section[data-testid="stSidebar"] .stRadio label {
-        color: white !important;
-        font-weight: 500 !important;
-    }
-
-    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] {
-        gap: 8px;
-    }
-
-    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label {
-        padding: 10px 12px;
-        border-radius: 8px;
-    }
-
-    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label:hover {
-        background-color: rgba(255, 255, 255, 0.08);
-    }
-
-
-    /* ========================================================
-       SIDEBAR BRAND
-       ======================================================== */
-
-    .sidebar-brand {
-        padding: 8px 4px 24px 4px;
-    }
-
-    .sidebar-kicker {
-        color: #7dd3c7;
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: 2px;
-        margin-bottom: 8px;
-        text-transform: uppercase;
-    }
-
-    .sidebar-title {
-        color: white;
-        font-size: 25px;
-        font-weight: 800;
-        line-height: 1.15;
-        margin-bottom: 10px;
-    }
-
-    .sidebar-copy {
-        color: #d7ebe8;
-        font-size: 13px;
-        line-height: 1.6;
-    }
-
-    .sidebar-divider {
-        height: 1px;
-        background-color: rgba(255, 255, 255, 0.2);
-        margin: 12px 0 22px 0;
-    }
-
-    .sidebar-disclaimer {
-        color: #c8dedb;
-        font-size: 11px;
-        line-height: 1.6;
-        margin-top: 24px;
-    }
-
-
-    /* ========================================================
-       NATIVE STREAMLIT SIDEBAR BUTTON
-       ======================================================== */
-
-    [data-testid="stSidebarCollapseButton"] {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        z-index: 999999 !important;
-    }
-
-    [data-testid="stSidebarCollapseButton"] button {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        align-items: center !important;
-        justify-content: center !important;
-        background-color: #0b3d39 !important;
-        color: white !important;
-        border: 1px solid #0b3d39 !important;
-        border-radius: 6px !important;
-        width: 36px !important;
-        height: 36px !important;
-        box-shadow: none !important;
-    }
-
-    [data-testid="stSidebarCollapseButton"] button:hover {
-        background-color: #14534d !important;
-        border-color: #14534d !important;
-    }
-
-    [data-testid="stSidebarCollapseButton"] button svg {
-        color: white !important;
-        fill: white !important;
-        stroke: white !important;
-    }
-
-
-    /* Collapsed sidebar button */
-
-    [data-testid="stSidebarCollapsedControl"] {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        z-index: 999999 !important;
-    }
-
-    [data-testid="stSidebarCollapsedControl"] button {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        align-items: center !important;
-        justify-content: center !important;
-        background-color: #0b3d39 !important;
-        color: white !important;
-        border: 1px solid #0b3d39 !important;
-        border-radius: 6px !important;
-        width: 36px !important;
-        height: 36px !important;
-        box-shadow: none !important;
-    }
-
-    [data-testid="stSidebarCollapsedControl"] button:hover {
-        background-color: #14534d !important;
-        border-color: #14534d !important;
-    }
-
-    [data-testid="stSidebarCollapsedControl"] button svg {
-        color: white !important;
-        fill: white !important;
-        stroke: white !important;
-    }
-
-
-    /* ========================================================
-       HOME / OVERVIEW
-       ======================================================== */
-
-    .home-kicker {
-        color: #087f72;
-        font-size: 13px;
-        font-weight: 800;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        margin-bottom: 12px;
-    }
-
-    .home-title {
-        color: #123b37;
-        font-size: 50px;
-        font-weight: 850;
-        line-height: 1.12;
-        margin-bottom: 24px;
-    }
-
-    .home-description {
-        color: #183f3a;
-        font-size: 17px;
-        line-height: 1.8;
-        max-width: 760px;
-        margin-bottom: 30px;
-    }
-
-
-    /* ========================================================
-       AVAILABLE TOOLS
-       ======================================================== */
-
-    .tools-title {
-        color: #087f72;
-        font-size: 13px;
-        font-weight: 800;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        padding-bottom: 12px;
-        border-bottom: 3px solid #087f72;
-        margin-top: 24px;
-        margin-bottom: 0;
-    }
-
-    .feature-item {
-        padding: 24px 0 22px 0;
-        border-bottom: 3px solid #e8b12b;
-    }
-
-    .feature-item.gold {
-        border-bottom-color: #e8b12b;
-    }
-
-    .feature-item.coral {
-        border-bottom-color: #df6852;
-    }
-
-    .feature-title {
-        color: #123b37;
-        font-size: 19px;
-        font-weight: 750;
-        margin-bottom: 10px;
-    }
-
-    .feature-copy {
-        color: #52746f;
-        font-size: 16px;
-        line-height: 1.6;
-    }
-
-
-    /* ========================================================
-       IMAGE
-       ======================================================== */
-
-    .hero-image {
-        width: 100%;
-        max-height: 500px;
-        object-fit: cover;
-        border-radius: 10px;
-    }
-
-
-    /* ========================================================
-       NOTE BOX
-       ======================================================== */
-
-    .note-box {
-        border-left: 3px solid #e8b12b;
-        padding: 12px 20px;
-        margin-top: 32px;
-        color: #52746f;
-        font-size: 15px;
-        line-height: 1.7;
-    }
-
-
-    /* ========================================================
-       PAGE HEADINGS
-       ======================================================== */
-
-    .page-kicker {
-        color: #087f72;
-        font-size: 12px;
-        font-weight: 800;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        margin-bottom: 8px;
-    }
-
-    .page-title {
-        color: #123b37;
-        font-size: 40px;
-        font-weight: 800;
-        margin-bottom: 10px;
-    }
-
-    .page-description {
-        color: #52746f;
-        font-size: 16px;
-        line-height: 1.7;
-        margin-bottom: 25px;
-    }
-
-
-    /* ========================================================
-       SELECTBOX
-       ======================================================== */
-
-    div[data-baseweb="select"] > div {
-        background-color: white !important;
-        border: 1px solid #b8cbc7 !important;
-        border-radius: 8px !important;
-        color: #123b37 !important;
-        min-height: 48px !important;
-    }
-
-    div[data-baseweb="select"] input {
-        color: #123b37 !important;
-    }
-
-    div[data-baseweb="select"] span {
-        color: #123b37 !important;
-    }
-
-    div[data-baseweb="select"] svg {
-        fill: #123b37 !important;
-    }
-
-    div[data-baseweb="popover"] {
-        background-color: white !important;
-    }
-
-    div[data-baseweb="menu"] {
-        background-color: white !important;
-    }
-
-    div[data-baseweb="menu"] div {
-        color: #123b37 !important;
-    }
-
-    div[data-baseweb="menu"] div:hover {
-        background-color: #edf5f3 !important;
-    }
-
-
-    /* ========================================================
-       BUTTONS
-       ======================================================== */
-
-    .stButton > button {
-        background-color: #0b3d39 !important;
-        color: white !important;
-        border: 1px solid #0b3d39 !important;
-        border-radius: 8px !important;
-        min-height: 44px !important;
-        font-weight: 700 !important;
-    }
-
-    .stButton > button:hover {
-        background-color: #14534d !important;
-        border-color: #14534d !important;
-        color: white !important;
-    }
-
-    .stButton > button:focus {
-        color: white !important;
-        border-color: #0b3d39 !important;
-        box-shadow: none !important;
-        outline: none !important;
-    }
-
-    .stButton > button:disabled {
-        background-color: #dbe5e2 !important;
-        color: #53706b !important;
-        border-color: #dbe5e2 !important;
-    }
-
-
-    /* ========================================================
-       FILE UPLOADER
-       ======================================================== */
-
-    section[data-testid="stFileUploader"] {
-        background-color: white !important;
-        border-radius: 10px !important;
-    }
-
-    section[data-testid="stFileUploader"] > div {
-        background-color: white !important;
-        border: 1px solid #b8cbc7 !important;
-        border-radius: 10px !important;
-    }
-
-    section[data-testid="stFileUploader"] div {
-        color: #52746f !important;
-    }
-
-    section[data-testid="stFileUploader"] small {
-        color: #52746f !important;
-    }
-
-    section[data-testid="stFileUploader"] button {
-        background-color: #0b3d39 !important;
-        color: white !important;
-        border: 1px solid #0b3d39 !important;
-        border-radius: 6px !important;
-    }
-
-    section[data-testid="stFileUploader"] button:hover {
-        background-color: #14534d !important;
-        color: white !important;
-    }
-
-    section[data-testid="stFileUploader"] button:focus {
-        border-color: #0b3d39 !important;
-        box-shadow: none !important;
-        outline: none !important;
-    }
-
-    section[data-testid="stFileUploader"] input:focus {
-        outline: none !important;
-        box-shadow: none !important;
-    }
-
-
-    /* ========================================================
-       RESULT BOX
-       ======================================================== */
-
-    .result-box {
-        background-color: white;
-        border: 1px solid #d4e1de;
-        border-radius: 10px;
-        padding: 24px;
-        margin-top: 20px;
-    }
-
-    .result-label {
-        color: #087f72;
-        font-size: 12px;
-        font-weight: 800;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        margin-bottom: 8px;
-    }
-
-    .result-value {
-        color: #123b37;
-        font-size: 28px;
-        font-weight: 800;
-        line-height: 1.3;
-    }
-
-    .result-text {
-        color: #52746f;
-        font-size: 15px;
-        line-height: 1.7;
-        margin-top: 10px;
-    }
-
-
-    /* ========================================================
-       METRIC CARDS
-       ======================================================== */
-
-    .metric-card {
-        background-color: white;
-        border: 1px solid #d4e1de;
-        border-radius: 10px;
-        padding: 20px;
-        text-align: center;
-    }
-
-    .metric-label {
-        color: #52746f;
-        font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .metric-value {
-        color: #123b37;
-        font-size: 26px;
-        font-weight: 800;
-        margin-top: 6px;
-    }
-
-
-    /* ========================================================
-       ALERTS
-       ======================================================== */
-
-    .stSuccess {
-        background-color: #edf7f3 !important;
-        color: #0b5c51 !important;
-    }
-
-    .stWarning {
-        background-color: #fff8df !important;
-        color: #725700 !important;
-    }
-
-    .stError {
-        background-color: #fff0ed !important;
-        color: #8a3225 !important;
-    }
-
-    .stInfo {
-        background-color: #edf5f3 !important;
-        color: #14534d !important;
-    }
-
-
-    /* ========================================================
-       MOBILE
-       ======================================================== */
-
-    @media (max-width: 900px) {
-
-        .main .block-container {
-            padding-left: 1.2rem;
-            padding-right: 1.2rem;
-            padding-top: 1.2rem;
-        }
-
-        .home-title {
-            font-size: 36px;
-        }
-
-        .page-title {
-            font-size: 32px;
-        }
-
-    }
-
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-
-# ============================================================
+# =========================================================
 # LOAD SYMPTOM DATA
-# ============================================================
+# =========================================================
 
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def load_symptom_data():
 
-    df = pd.read_csv(DATASET_FILE)
-    description = pd.read_csv(DESCRIPTION_FILE)
-    precaution = pd.read_csv(PRECAUTION_FILE)
+    df = pd.read_csv("dataset.csv")
+    desc = pd.read_csv("symptom_Description.csv")
+    prec = pd.read_csv("symptom_precaution.csv")
 
-    df.columns = df.columns.astype(str).str.strip()
-    description.columns = description.columns.astype(str).str.strip()
-    precaution.columns = precaution.columns.astype(str).str.strip()
+    df.columns = df.columns.str.strip()
+    desc.columns = desc.columns.str.strip()
+    prec.columns = prec.columns.str.strip()
 
-    symptom_columns = [
+    symptom_cols = [
         column
         for column in df.columns
-        if column.lower().startswith("symptom")
+        if "Symptom" in column
     ]
 
-    if not symptom_columns:
-        raise ValueError("No symptom columns were found in dataset.csv.")
-
-    df["All_Symptoms"] = df[symptom_columns].fillna("").astype(str).apply(
+    df["All_Symptoms"] = df[symptom_cols].apply(
         lambda row: " ".join(
-            value.strip().replace(" ", "_")
-            for value in row
-            if value.strip()
+            str(symptom)
+            .strip()
+            .replace(" ", "_")
+            for symptom in row
+            if pd.notna(symptom)
+            and str(symptom).strip()
         ),
         axis=1,
     )
 
-    return df, description, precaution
+    return df, desc, prec
 
 
-# ============================================================
-# LOAD IMAGE MODELS
-# ============================================================
+# =========================================================
+# LOAD DEEP LEARNING MODELS
+# =========================================================
 
-@st.cache_resource
+@st.cache_resource(
+    show_spinner="Loading diagnostic models..."
+)
 def load_models():
 
-    pneumonia_model = models.resnet18(weights=None)
-    pneumonia_model.fc = nn.Linear(
-        pneumonia_model.fc.in_features,
+    # -----------------------------------------------------
+    # Chest X-ray model
+    # -----------------------------------------------------
+
+    xray_model = models.resnet18(
+        pretrained=True
+    )
+
+    xray_model.fc = nn.Linear(
+        xray_model.fc.in_features,
         2
     )
 
-    pneumonia_state = torch.load(
-        PNEUMONIA_MODEL_FILE,
-        map_location=device
+    xray_model.load_state_dict(
+        torch.load(
+            "pneumonia_model.pth",
+            map_location=device
+        )
     )
 
-    pneumonia_model.load_state_dict(pneumonia_state)
-    pneumonia_model = pneumonia_model.to(device)
-    pneumonia_model.eval()
+    xray_model = xray_model.to(device)
+    xray_model.eval()
 
+    # -----------------------------------------------------
+    # Skin cancer model
+    # -----------------------------------------------------
 
-    skin_model = models.resnet18(weights=None)
+    skin_model = models.resnet18(
+        pretrained=True
+    )
+
     skin_model.fc = nn.Linear(
         skin_model.fc.in_features,
         7
     )
 
-    skin_state = torch.load(
-        SKIN_MODEL_FILE,
-        map_location=device
+    skin_model.load_state_dict(
+        torch.load(
+            "skin_cancer_model.pth",
+            map_location=device
+        )
     )
 
-    skin_model.load_state_dict(skin_state)
     skin_model = skin_model.to(device)
     skin_model.eval()
 
-    return pneumonia_model, skin_model
+    return xray_model, skin_model
 
 
-# ============================================================
+# =========================================================
+# LOAD DATA
+# =========================================================
+
+df, desc, prec = load_symptom_data()
+
+
+# =========================================================
 # TRAIN SYMPTOM MODEL
-# ============================================================
+# =========================================================
 
-@st.cache_resource
-def train_symptom_model(df):
+X = df["All_Symptoms"]
+y = df["Disease"]
 
-    X = df["All_Symptoms"]
-    y = df["Disease"]
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=0.20,
-        random_state=42,
-        stratify=y
-    )
+vectorizer = TfidfVectorizer()
 
-    vectorizer = TfidfVectorizer()
+X_train_tfidf = vectorizer.fit_transform(
+    X_train
+)
 
-    X_train_vectorized = vectorizer.fit_transform(X_train)
-    X_test_vectorized = vectorizer.transform(X_test)
+lr_model = LogisticRegression(
+    max_iter=500
+)
 
-    model = LogisticRegression(
-        max_iter=500
-    )
+lr_model.fit(
+    X_train_tfidf,
+    y_train
+)
 
-    model.fit(
-        X_train_vectorized,
-        y_train
-    )
+symptom_predictions = lr_model.predict(
+    vectorizer.transform(X_test)
+)
 
-    predictions = model.predict(
-        X_test_vectorized
-    )
-
-    accuracy = accuracy_score(
-        y_test,
-        predictions
-    )
-
-    return model, vectorizer, accuracy
-
-
-# ============================================================
-# IMAGE TRANSFORM
-# ============================================================
-
-image_transform = transforms.Compose(
-    [
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.5, 0.5, 0.5],
-            std=[0.5, 0.5, 0.5]
-        ),
-    ]
+SYMPTOM_MODEL_ACCURACY = (
+    f"{accuracy_score(y_test, symptom_predictions) * 100:.2f}%"
 )
 
 
-# ============================================================
-# SKIN CLASSES
-# ============================================================
+# =========================================================
+# IMAGE TRANSFORMS
+# =========================================================
+
+xray_transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(
+        [0.5, 0.5, 0.5],
+        [0.5, 0.5, 0.5]
+    ),
+])
+
+skin_transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(
+        [0.5, 0.5, 0.5],
+        [0.5, 0.5, 0.5]
+    ),
+])
+
+
+# =========================================================
+# SKIN CANCER CLASSES
+# =========================================================
 
 skin_classes = [
     "bkl",
@@ -769,110 +221,1028 @@ skin_class_names = {
 }
 
 
-# ============================================================
-# PREDICTION FUNCTIONS
-# ============================================================
+# =========================================================
+# CHEST X-RAY PREDICTION
+# =========================================================
 
-def predict_xray(model, image):
+def predict_xray(img):
 
-    image = image.convert("RGB")
+    xray_model, _ = load_models()
 
-    tensor = image_transform(image)
-    tensor = tensor.unsqueeze(0).to(device)
-
-    with torch.no_grad():
-
-        output = model(tensor)
-
-        prediction = torch.argmax(
-            output,
-            dim=1
-        ).item()
-
-    classes = [
-        "NORMAL",
-        "PNEUMONIA"
-    ]
-
-    return classes[prediction]
-
-
-def predict_skin(model, image):
-
-    image = image.convert("RGB")
-
-    tensor = image_transform(image)
-    tensor = tensor.unsqueeze(0).to(device)
-
-    with torch.no_grad():
-
-        output = model(tensor)
-
-        prediction = torch.argmax(
-            output,
-            dim=1
-        ).item()
-
-    predicted_class = skin_classes[prediction]
-
-    return skin_class_names[predicted_class]
-
-
-# ============================================================
-# LOAD DATA AND MODELS
-# ============================================================
-
-try:
-
-    df, description_df, precaution_df = load_symptom_data()
-
-    symptom_model, vectorizer, symptom_accuracy = train_symptom_model(df)
-
-    pneumonia_model, skin_model = load_models()
-
-except Exception as error:
-
-    st.error(
-        "Unable to load the required project files."
+    img_tensor = (
+        xray_transform(
+            img.convert("RGB")
+        )
+        .unsqueeze(0)
+        .to(device)
     )
 
-    st.exception(error)
+    with torch.no_grad():
 
-    st.stop()
+        output = xray_model(
+            img_tensor
+        )
+
+        predicted = torch.argmax(
+            output,
+            dim=1
+        )
+
+    return [
+        "NORMAL",
+        "PNEUMONIA"
+    ][predicted.item()]
 
 
-# ============================================================
+# =========================================================
+# SKIN LESION PREDICTION
+# =========================================================
+
+def predict_skin(img):
+
+    _, skin_model = load_models()
+
+    img_tensor = (
+        skin_transform(
+            img.convert("RGB")
+        )
+        .unsqueeze(0)
+        .to(device)
+    )
+
+    with torch.no_grad():
+
+        output = skin_model(
+            img_tensor
+        )
+
+        predicted = torch.argmax(
+            output,
+            dim=1
+        )
+
+    return skin_class_names[
+        skin_classes[predicted.item()]
+    ]
+
+
+# =========================================================
+# CARESIGHT CSS
+# =========================================================
+
+st.markdown(
+    """
+<style>
+
+/* =========================================================
+   CARESIGHT COLOR SYSTEM
+   ========================================================= */
+
+:root {
+    --ink: #173230;
+    --muted: #5e7773;
+    --paper: #f5f8f6;
+    --line: #d6e3de;
+
+    --teal: #0b7367;
+    --teal-dark: #07584f;
+
+    --green-dark: #0b3d39;
+    --green-light: #e8f3f0;
+
+    --gold: #e9b44c;
+    --coral: #d96850;
+
+    --white: #ffffff;
+}
+
+
+/* =========================================================
+   MAIN APPLICATION
+   ========================================================= */
+
+.stApp {
+    background: var(--paper) !important;
+    color: var(--ink) !important;
+    font-family: "DM Sans", sans-serif;
+}
+
+#MainMenu {
+    visibility: hidden !important;
+}
+
+footer {
+    visibility: hidden !important;
+}
+
+header {
+    background: transparent !important;
+}
+
+[data-testid="stHeader"] {
+    background: transparent !important;
+}
+
+[data-testid="stToolbar"] {
+    display: none !important;
+}
+
+
+/* =========================================================
+   MAIN CONTAINER
+   ========================================================= */
+
+[data-testid="stAppViewContainer"] > .main {
+    padding-top: 1.25rem;
+}
+
+[data-testid="stMainBlockContainer"] {
+    max-width: 1240px;
+    padding: 0 2.1rem 3rem;
+}
+
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+[data-testid="stSidebar"] {
+    background: var(--green-dark) !important;
+    border-right: 1px solid #22534e !important;
+}
+
+[data-testid="stSidebar"] > div:first-child {
+    background: var(--green-dark) !important;
+}
+
+[data-testid="stSidebarContent"] {
+    background: var(--green-dark) !important;
+}
+
+[data-testid="stSidebarHeader"] {
+    background: var(--green-dark) !important;
+}
+
+
+/* =========================================================
+   SIDEBAR TEXT
+   ========================================================= */
+
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] label {
+    color: #f4fbf8 !important;
+}
+
+
+/* =========================================================
+   SIDEBAR BRAND
+   ========================================================= */
+
+.brand-kicker {
+    color: #9bd3c5 !important;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.2rem;
+}
+
+.brand-name {
+    color: #ffffff !important;
+    font-family: "Playfair Display", serif;
+    font-size: 2rem;
+    line-height: 1;
+    margin: 0 0 0.45rem;
+}
+
+.brand-copy {
+    color: #c2dad4 !important;
+    font-size: 0.86rem;
+    line-height: 1.55;
+    margin-bottom: 1.75rem;
+}
+
+
+/* =========================================================
+   SIDEBAR NAVIGATION
+   ========================================================= */
+
+[data-testid="stSidebar"] [data-testid="stRadio"] label {
+    color: #f4fbf8 !important;
+    font-weight: 500 !important;
+    padding: 0.2rem 0 !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stRadio"] label p {
+    color: #f4fbf8 !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stRadio"] label span {
+    color: #f4fbf8 !important;
+}
+
+
+/* =========================================================
+   SIDEBAR DISCLAIMER
+   ========================================================= */
+
+[data-testid="stSidebar"]
+[data-testid="stCaptionContainer"] {
+    color: #c2dad4 !important;
+}
+
+[data-testid="stSidebar"]
+[data-testid="stCaptionContainer"] p {
+    color: #c2dad4 !important;
+}
+
+
+/* =========================================================
+   SINGLE SIDEBAR BUTTON
+   ========================================================= */
+
+/*
+   Use Streamlit's native sidebar controls.
+   Only the control for the current sidebar state is visible.
+*/
+
+
+/* ---------------------------------------------------------
+   Sidebar OPEN:
+   Show only the close button.
+   Hide all expand/collapsed controls.
+   --------------------------------------------------------- */
+
+body:has([data-testid="stSidebar"][aria-expanded="true"])
+[data-testid="stExpandSidebarButton"],
+body:has([data-testid="stSidebar"][aria-expanded="true"])
+[data-testid="stSidebarCollapsedControl"],
+body:has([data-testid="stSidebar"][aria-expanded="true"])
+[data-testid="collapsedControl"] {
+    display: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   Sidebar CLOSED:
+   Show only the expand button.
+   Hide the close button.
+   --------------------------------------------------------- */
+
+body:not(:has([data-testid="stSidebar"][aria-expanded="true"]))
+[data-testid="stSidebarCollapseButton"] {
+    display: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   Native control wrappers
+   --------------------------------------------------------- */
+
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stExpandSidebarButton"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    z-index: 999999 !important;
+}
+
+
+/* ---------------------------------------------------------
+   Actual button
+   --------------------------------------------------------- */
+
+[data-testid="stSidebarCollapseButton"] button,
+[data-testid="stExpandSidebarButton"] button,
+[data-testid="stSidebarCollapsedControl"] button,
+[data-testid="collapsedControl"] button {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    background: var(--green-dark) !important;
+    border: 1px solid #5c8f87 !important;
+    border-radius: 7px !important;
+
+    box-shadow: none !important;
+    color: #ffffff !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    outline: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   Hover
+   --------------------------------------------------------- */
+
+[data-testid="stSidebarCollapseButton"] button:hover,
+[data-testid="stExpandSidebarButton"] button:hover,
+[data-testid="stSidebarCollapsedControl"] button:hover,
+[data-testid="collapsedControl"] button:hover {
+    background: var(--teal-dark) !important;
+    border-color: #82b6ad !important;
+}
+
+
+/* ---------------------------------------------------------
+   Focus
+   --------------------------------------------------------- */
+
+[data-testid="stSidebarCollapseButton"] button:focus,
+[data-testid="stExpandSidebarButton"] button:focus,
+[data-testid="stSidebarCollapsedControl"] button:focus,
+[data-testid="collapsedControl"] button:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   Icon
+   --------------------------------------------------------- */
+
+[data-testid="stSidebarCollapseButton"] button svg,
+[data-testid="stExpandSidebarButton"] button svg,
+[data-testid="stSidebarCollapsedControl"] button svg,
+[data-testid="collapsedControl"] button svg {
+    width: 21px !important;
+    height: 21px !important;
+
+    color: #ffffff !important;
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+
+    opacity: 1 !important;
+}
+
+
+/* ---------------------------------------------------------
+   Mobile
+   --------------------------------------------------------- */
+
+@media (max-width: 700px) {
+
+    [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="stExpandSidebarButton"] button,
+    [data-testid="stSidebarCollapsedControl"] button,
+    [data-testid="collapsedControl"] button {
+
+        width: 40px !important;
+        height: 40px !important;
+
+        min-width: 40px !important;
+        min-height: 40px !important;
+    }
+}
+
+
+/* =========================================================
+   PAGE TYPOGRAPHY
+   ========================================================= */
+
+.page-kicker {
+    color: var(--teal) !important;
+
+    font-size: 0.78rem;
+
+    font-weight: 700;
+
+    letter-spacing: 0.12em;
+
+    text-transform: uppercase;
+
+    margin-bottom: 0.6rem;
+}
+
+.page-title {
+    color: var(--ink) !important;
+
+    font-family: "Playfair Display", serif;
+
+    font-size: clamp(
+        2.1rem,
+        4vw,
+        3.65rem
+    );
+
+    line-height: 1.08;
+
+    margin: 0 0 0.8rem;
+}
+
+.page-copy {
+    color: var(--ink) !important;
+
+    font-size: 1.04rem;
+
+    line-height: 1.65;
+
+    max-width: 42rem;
+
+    margin: 0 0 1.7rem;
+}
+
+.hero-rule {
+    border: 0;
+
+    border-top: 1px solid var(--line);
+
+    margin: 1.35rem 0 1.75rem;
+}
+
+.section-label {
+    color: var(--teal) !important;
+
+    font-size: 0.78rem;
+
+    font-weight: 700;
+
+    letter-spacing: 0.1em;
+
+    text-transform: uppercase;
+
+    margin-bottom: 0.35rem;
+}
+
+
+/* =========================================================
+   OVERVIEW FEATURE ITEMS
+   ========================================================= */
+
+.feature-item {
+    border-top: 3px solid var(--teal);
+
+    padding: 1rem 0 0.8rem;
+
+    margin-bottom: 1rem;
+}
+
+.feature-item.gold {
+    border-color: var(--gold);
+}
+
+.feature-item.coral {
+    border-color: var(--coral);
+}
+
+.feature-title {
+    color: var(--ink) !important;
+
+    font-size: 1.05rem;
+
+    font-weight: 700;
+
+    margin-bottom: 0.25rem;
+}
+
+.feature-copy {
+    color: var(--muted) !important;
+
+    font-size: 0.93rem;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   QUIET NOTE
+   ========================================================= */
+
+.quiet-note {
+    border-left: 3px solid var(--gold);
+
+    color: var(--muted) !important;
+
+    font-size: 0.9rem;
+
+    line-height: 1.55;
+
+    padding:
+        0.65rem
+        0
+        0.65rem
+        1rem;
+
+    margin-top: 1rem;
+}
+
+
+/* =========================================================
+   SELECTBOX
+   ========================================================= */
+
+/* Main selectbox container */
+
+[data-testid="stSelectbox"] {
+    color: var(--ink) !important;
+}
+
+
+/* Label */
+
+[data-testid="stSelectbox"] label {
+    color: var(--ink) !important;
+    opacity: 1 !important;
+}
+
+
+/* Selectbox outer element */
+
+[data-testid="stSelectbox"]
+[data-baseweb="select"] {
+    background-color: #ffffff !important;
+
+    border: 1px solid #b8cec7 !important;
+
+    border-radius: 7px !important;
+
+    color: #173230 !important;
+
+    opacity: 1 !important;
+
+    box-shadow: none !important;
+}
+
+
+/* Selectbox inner elements */
+
+[data-testid="stSelectbox"]
+[data-baseweb="select"] > div {
+    background-color: #ffffff !important;
+    color: #173230 !important;
+}
+
+
+/* Every text node */
+
+[data-testid="stSelectbox"]
+[data-baseweb="select"] div {
+    color: #173230 !important;
+}
+
+
+/* Span */
+
+[data-testid="stSelectbox"]
+[data-baseweb="select"] span {
+    color: #173230 !important;
+
+    opacity: 1 !important;
+}
+
+
+/* Button-like area */
+
+[data-testid="stSelectbox"]
+[role="button"] {
+    background-color: #ffffff !important;
+
+    color: #173230 !important;
+
+    opacity: 1 !important;
+}
+
+
+/* Text in button */
+
+[data-testid="stSelectbox"]
+[role="button"] span {
+    color: #173230 !important;
+
+    opacity: 1 !important;
+}
+
+
+/* Input */
+
+[data-testid="stSelectbox"] input {
+    color: #173230 !important;
+
+    -webkit-text-fill-color: #173230 !important;
+
+    opacity: 1 !important;
+}
+
+
+/* Input placeholder */
+
+[data-testid="stSelectbox"]
+input::placeholder {
+    color: #5e7773 !important;
+
+    -webkit-text-fill-color: #5e7773 !important;
+
+    opacity: 1 !important;
+}
+
+
+/* BaseWeb placeholder */
+
+[data-testid="stSelectbox"]
+[data-baseweb="select"]
+[aria-selected="false"] {
+    color: #5e7773 !important;
+}
+
+
+/* SVG arrow */
+
+[data-testid="stSelectbox"]
+svg {
+    color: #0b7367 !important;
+
+    fill: #0b7367 !important;
+
+    stroke: #0b7367 !important;
+}
+
+
+/* Selectbox focus */
+
+[data-testid="stSelectbox"]
+[data-baseweb="select"]:focus-within {
+    border-color: #0b7367 !important;
+
+    box-shadow:
+        0 0 0 1px
+        #0b7367 !important;
+
+    outline: none !important;
+}
+
+
+/* =========================================================
+   SELECTBOX DROPDOWN
+   ========================================================= */
+
+[data-baseweb="popover"] {
+    background: #ffffff !important;
+}
+
+[data-baseweb="popover"] div {
+    color: #173230 !important;
+}
+
+[data-baseweb="popover"] span {
+    color: #173230 !important;
+}
+
+[role="listbox"] {
+    background: #ffffff !important;
+
+    color: #173230 !important;
+}
+
+[role="option"] {
+    background: #ffffff !important;
+
+    color: #173230 !important;
+}
+
+[role="option"] span {
+    color: #173230 !important;
+}
+
+[role="option"]:hover {
+    background: #e8f3f0 !important;
+
+    color: #07584f !important;
+}
+
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.stButton > button {
+    width: 100%;
+
+    min-height: 2.85rem;
+
+    background: var(--teal) !important;
+
+    color: #ffffff !important;
+
+    border: none !important;
+
+    border-radius: 6px !important;
+
+    font-weight: 700;
+}
+
+.stButton > button p {
+    color: #ffffff !important;
+}
+
+.stButton > button span {
+    color: #ffffff !important;
+}
+
+.stButton > button:hover {
+    background: var(--teal-dark) !important;
+
+    color: #ffffff !important;
+}
+
+
+/* Disabled button */
+
+.stButton > button:disabled {
+    background: #d5e1dd !important;
+
+    color: #173230 !important;
+
+    opacity: 1 !important;
+
+    cursor: not-allowed !important;
+}
+
+.stButton > button:disabled p {
+    color: #173230 !important;
+}
+
+.stButton > button:disabled span {
+    color: #173230 !important;
+}
+
+
+/* =========================================================
+   FILE UPLOADER
+   ========================================================= */
+
+[data-testid="stFileUploader"] {
+    width: 100% !important;
+}
+
+
+/* Uploader box */
+
+[data-testid="stFileUploaderDropzone"] {
+    background: #ffffff !important;
+
+    border: 1px solid #b8cec7 !important;
+
+    border-radius: 7px !important;
+
+    padding: 1.6rem 1rem !important;
+
+    box-shadow: none !important;
+
+    outline: none !important;
+}
+
+
+/* Prevent red focus border */
+
+[data-testid="stFileUploaderDropzone"]:focus,
+[data-testid="stFileUploaderDropzone"]:focus-within,
+[data-testid="stFileUploaderDropzone"]:active {
+    background: #ffffff !important;
+
+    border: 1px solid #b8cec7 !important;
+
+    outline: none !important;
+
+    box-shadow: none !important;
+}
+
+
+/* Hover */
+
+[data-testid="stFileUploaderDropzone"]:hover {
+    background: #fbfdfc !important;
+
+    border-color: #0b7367 !important;
+}
+
+
+/* Uploader instruction area */
+
+[data-testid="stFileUploaderDropzoneInstructions"] {
+    color: #5e7773 !important;
+
+    opacity: 1 !important;
+}
+
+
+/* Drag and drop text */
+
+[data-testid="stFileUploaderDropzoneInstructions"] span {
+    color: #5e7773 !important;
+
+    opacity: 1 !important;
+}
+
+
+/* 200MB text */
+
+[data-testid="stFileUploaderDropzoneInstructions"] small {
+    color: #5e7773 !important;
+
+    opacity: 1 !important;
+}
+
+
+/* Generic uploader text */
+
+[data-testid="stFileUploaderDropzone"] p {
+    color: #5e7773 !important;
+}
+
+[data-testid="stFileUploaderDropzone"] span {
+    color: #5e7773 !important;
+}
+
+
+/* Browse files button */
+
+[data-testid="stFileUploaderDropzone"] button {
+    background: #0b3d39 !important;
+
+    color: #ffffff !important;
+
+    border: none !important;
+
+    border-radius: 6px !important;
+
+    font-weight: 600 !important;
+}
+
+[data-testid="stFileUploaderDropzone"] button:hover {
+    background: #07584f !important;
+}
+
+[data-testid="stFileUploaderDropzone"] button span {
+    color: #ffffff !important;
+}
+
+
+/* Upload icon */
+
+[data-testid="stFileUploaderDropzone"] svg {
+    color: #5e7773 !important;
+
+    fill: #5e7773 !important;
+
+    stroke: #5e7773 !important;
+}
+
+
+/* =========================================================
+   ALERT BOXES
+   ========================================================= */
+
+[data-testid="stAlert"] {
+    border-radius: 6px !important;
+
+    color: var(--ink) !important;
+}
+
+[data-testid="stAlert"] p {
+    color: var(--ink) !important;
+}
+
+[data-testid="stAlert"] span {
+    color: var(--ink) !important;
+}
+
+
+/* =========================================================
+   IMAGE
+   ========================================================= */
+
+[data-testid="stImage"] img {
+    border-radius: 6px;
+
+    border: 1px solid var(--line);
+}
+
+[data-testid="stImage"] figcaption {
+    color: var(--muted) !important;
+}
+
+
+/* =========================================================
+   GENERAL TEXT
+   ========================================================= */
+
+[data-testid="stAppViewContainer"]
+.main label {
+    color: var(--ink) !important;
+}
+
+[data-testid="stMarkdownContainer"] p {
+    color: var(--ink);
+}
+
+[data-testid="stMarkdownContainer"] li {
+    color: var(--ink);
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+
+        gap: 1rem !important;
+    }
+
+    [data-testid="stHorizontalBlock"]
+    > [data-testid="stColumn"] {
+        flex: 1 1 100% !important;
+
+        min-width: 100% !important;
+    }
+}
+
+
+@media (max-width: 700px) {
+
+    [data-testid="stMainBlockContainer"] {
+        max-width: 100%;
+
+        padding:
+            0
+            1rem
+            2.5rem;
+
+        overflow-x: hidden;
+    }
+
+    [data-testid="stAppViewContainer"] > .main {
+        padding-top: 0.8rem;
+    }
+
+    .page-title {
+        font-size: 2.35rem;
+    }
+
+    [data-testid="stSidebar"] {
+        width: min(86vw, 18rem) !important;
+
+        min-width: min(86vw, 18rem) !important;
+    }
+
+    [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="stExpandSidebarButton"] button,
+    [data-testid="stSidebarCollapsedControl"] button,
+    [data-testid="collapsedControl"] button {
+        width: 40px !important;
+
+        height: 40px !important;
+
+        min-width: 40px !important;
+
+        min-height: 40px !important;
+    }
+}
+
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+
+# =========================================================
 # SIDEBAR
-# ============================================================
+# =========================================================
 
 with st.sidebar:
 
     st.markdown(
-        """
-        <div class="sidebar-brand">
-
-            <div class="sidebar-kicker">
-                AI-POWERED HEALTH SCREENING
-            </div>
-
-            <div class="sidebar-title">
-                Health AI Assistant
-            </div>
-
-            <div class="sidebar-copy">
-                A focused workspace for symptom analysis
-                and image-based health screening.
-            </div>
-
-        </div>
-
-        <div class="sidebar-divider"></div>
-        """,
+        '<div class="brand-kicker">'
+        'AI-POWERED HEALTH SCREENING'
+        '</div>'
+        '<div class="brand-name">'
+        'Health AI Assistant'
+        '</div>'
+        '<div class="brand-copy">'
+        'A focused workspace for symptom details '
+        'and image-based screening.'
+        '</div>',
         unsafe_allow_html=True,
     )
 
-    selected_page = st.radio(
-        "Navigation",
+    module = st.radio(
+        "Choose a workspace",
         [
             "Overview",
             "Symptoms Checker",
@@ -882,40 +1252,30 @@ with st.sidebar:
         label_visibility="collapsed",
     )
 
-    st.markdown(
-        """
-        <div class="sidebar-disclaimer">
-            This application is an educational AI project.
-            Results are intended to support health awareness
-            and should not replace professional medical care.
-        </div>
-        """,
-        unsafe_allow_html=True,
+    st.caption(
+        "For informational screening only. "
+        "Consult a qualified clinician for diagnosis "
+        "or treatment."
     )
 
 
-# ============================================================
+# =========================================================
 # OVERVIEW
-# ============================================================
+# =========================================================
 
-if selected_page == "Overview":
+if module == "Overview":
 
-    left_column, right_column = st.columns(
-        [1.1, 0.9],
+    intro_col, image_col = st.columns(
+        [1.05, 0.95],
         gap="large"
     )
 
-    with left_column:
-
-        st.markdown(
-            '<div class="home-kicker">PERSONAL HEALTH ASSISTANT</div>',
-            unsafe_allow_html=True,
-        )
+    with intro_col:
 
         st.markdown(
             """
-            <div class="home-title">
-                AI 3-IN-1 HEALTH CARE SYSTEM
+            <div class="page-kicker">
+                Personal health assistant
             </div>
             """,
             unsafe_allow_html=True,
@@ -923,20 +1283,42 @@ if selected_page == "Overview":
 
         st.markdown(
             """
-            <div class="home-description">
-                Review symptom information, screen a chest X-ray
-                for pneumonia, or classify a skin lesion from one
-                calm, focused workspace.
-            </div>
+            <h1 class="page-title">
+                AI 3-IN-1 HEALTH 
+                CARE SYSTEM
+            </h1>
             """,
             unsafe_allow_html=True,
         )
 
         st.markdown(
-            '<div class="tools-title">AVAILABLE TOOLS</div>',
+            """
+            <p class="page-copy">
+                Review symptom information, screen a chest
+                X-ray for pneumonia, or classify a skin lesion
+                from one calm, focused workspace.
+            </p>
+            """,
             unsafe_allow_html=True,
         )
 
+        st.markdown(
+            """
+            <hr class="hero-rule">
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            """
+            <div class="section-label">
+                Available tools
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Symptom feature
         st.markdown(
             '<div class="feature-item">'
             '<div class="feature-title">'
@@ -950,6 +1332,7 @@ if selected_page == "Overview":
             unsafe_allow_html=True,
         )
 
+        # X-ray feature
         st.markdown(
             '<div class="feature-item gold">'
             '<div class="feature-title">'
@@ -963,6 +1346,7 @@ if selected_page == "Overview":
             unsafe_allow_html=True,
         )
 
+        # Skin feature
         st.markdown(
             '<div class="feature-item coral">'
             '<div class="feature-title">'
@@ -976,26 +1360,16 @@ if selected_page == "Overview":
             unsafe_allow_html=True,
         )
 
-    with right_column:
+    with image_col:
 
-        if PROJECT_IMAGE.exists():
-
-            image = Image.open(PROJECT_IMAGE)
-
-            st.image(
-                image,
-                use_container_width=True
-            )
-
-        else:
-
-            st.info(
-                "Project image was not found."
-            )
+        st.image(
+            "ChatGPT Image Aug 28, 2025, 02_40_38 AM.png",
+            use_container_width=True,
+        )
 
         st.markdown(
             """
-            <div class="note-box">
+            <div class="quiet-note">
                 Use the navigation panel to open a tool.
                 Results are designed to support, not replace,
                 professional medical care.
@@ -1005,302 +1379,332 @@ if selected_page == "Overview":
         )
 
 
-# ============================================================
+# =========================================================
 # SYMPTOMS CHECKER
-# ============================================================
+# =========================================================
 
-elif selected_page == "Symptoms Checker":
-
-    st.markdown(
-        '<div class="page-kicker">SYMPTOM ANALYSIS</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        '<div class="page-title">Symptoms Checker</div>',
-        unsafe_allow_html=True,
-    )
+elif module == "Symptoms Checker":
 
     st.markdown(
         """
-        <div class="page-description">
-            Select a condition to review its description and
-            recommended precautions from the dataset.
+        <div class="page-kicker">
+            Clinical reference
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    diseases = sorted(
-        df["Disease"]
-        .dropna()
-        .astype(str)
-        .unique()
-        .tolist()
+    st.markdown(
+        """
+        <h1 class="page-title">
+            Symptom and condition details
+        </h1>
+        """,
+        unsafe_allow_html=True,
     )
 
+    st.markdown(
+        """
+        <p class="page-copy">
+            Select a condition to review its dataset
+            description and practical precautions.
+        </p>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        """
+        <div class="section-label">
+            Condition
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Condition selector
     selected_disease = st.selectbox(
         "Choose a condition",
-        diseases,
+        sorted(
+            df["Disease"]
+            .unique()
+            .tolist()
+        ),
         index=None,
         placeholder="Choose a condition to review",
         label_visibility="collapsed",
     )
 
-    if selected_disease:
+    # Details button
+    if st.button(
+        "View condition details",
+        disabled=selected_disease is None,
+    ):
 
-        description_text = ""
-        precautions = []
+        description = desc[
+            desc["Disease"] == selected_disease
+        ]["Description"].values
 
-        description_columns = description_df.columns.tolist()
+        if len(description) > 0:
+            description = description[0]
+        else:
+            description = "No description available."
 
-        if len(description_columns) >= 2:
+        precaution_data = prec[
+            prec["Disease"] == selected_disease
+        ]
 
-            disease_column = description_columns[0]
-            description_column = description_columns[1]
+        if not precaution_data.empty:
 
-            matched_description = description_df[
-                description_df[disease_column]
-                .astype(str)
-                .str.strip()
-                .str.lower()
-                == selected_disease.strip().lower()
+            precautions = (
+                precaution_data
+                .iloc[0, 1:]
+                .dropna()
+                .tolist()
+            )
+
+        else:
+
+            precautions = [
+                "No precaution listed."
             ]
 
-            if not matched_description.empty:
+        st.success(
+            f"Condition selected: {selected_disease}"
+        )
 
-                description_text = str(
-                    matched_description.iloc[0][description_column]
+        details_col, precaution_col = st.columns(
+            [1.15, 0.85],
+            gap="large"
+        )
+
+        with details_col:
+
+            st.markdown(
+                """
+                <div class="section-label">
+                    Overview
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            st.write(description)
+
+        with precaution_col:
+
+            st.markdown(
+                """
+                <div class="section-label">
+                    Suggested precautions
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            for item in precautions:
+
+                st.write(
+                    f"- {item}"
                 )
 
 
-        precaution_columns = precaution_df.columns.tolist()
+# =========================================================
+# CHEST X-RAY
+# =========================================================
 
-        if len(precaution_columns) >= 2:
+elif module == "Chest X-ray":
 
-            disease_column = precaution_columns[0]
+    st.markdown(
+        """
+        <div class="page-kicker">
+            Image screening
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-            matched_precaution = precaution_df[
-                precaution_df[disease_column]
-                .astype(str)
-                .str.strip()
-                .str.lower()
-                == selected_disease.strip().lower()
-            ]
+    st.markdown(
+        """
+        <h1 class="page-title">
+            Chest X-ray review
+        </h1>
+        """,
+        unsafe_allow_html=True,
+    )
 
-            if not matched_precaution.empty:
+    st.markdown(
+        """
+        <p class="page-copy">
+            Upload a clear chest X-ray image to screen
+            for a normal or pneumonia classification.
+        </p>
+        """,
+        unsafe_allow_html=True,
+    )
 
-                row = matched_precaution.iloc[0]
+    upload_col, preview_col = st.columns(
+        [0.9, 1.1],
+        gap="large"
+    )
 
-                for column in precaution_columns[1:]:
+    with upload_col:
 
-                    value = row[column]
-
-                    if pd.notna(value) and str(value).strip():
-
-                        precautions.append(
-                            str(value).strip()
-                        )
-
-
-        st.markdown(
-            """
-            <div class="result-box">
-                <div class="result-label">
-                    Selected condition
-                </div>
-                <div class="result-value">
-            """,
-            unsafe_allow_html=True,
+        uploaded_file = st.file_uploader(
+            "Upload chest X-ray",
+            type=[
+                "jpg",
+                "png",
+                "jpeg",
+            ],
+            help="Accepted formats: JPG, PNG, JPEG.",
         )
 
         st.markdown(
-            selected_disease
-        )
-
-        st.markdown(
             """
-                </div>
+            <div class="quiet-note">
+                Choose a well-lit, uncropped image.
+                The output is a screening classification,
+                not a diagnosis.
             </div>
             """,
             unsafe_allow_html=True,
         )
 
+    with preview_col:
 
-        if description_text:
+        if uploaded_file:
 
-            st.markdown(
-                "### Condition Description"
+            img = Image.open(
+                uploaded_file
             )
 
-            st.write(
-                description_text
+            st.image(
+                img,
+                caption="Uploaded chest X-ray",
+                use_container_width=True,
             )
 
-
-        if precautions:
-
-            st.markdown(
-                "### Suggested Precautions"
-            )
-
-            for precaution in precautions:
-
-                st.markdown(
-                    "- " + precaution
-                )
-
-
-# ============================================================
-# CHEST X-RAY
-# ============================================================
-
-elif selected_page == "Chest X-ray":
-
-    st.markdown(
-        '<div class="page-kicker">IMAGE SCREENING</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        '<div class="page-title">Chest X-ray Screening</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        """
-        <div class="page-description">
-            Upload a chest X-ray image to screen for a
-            pneumonia classification using the trained
-            ResNet18 model.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    uploaded_file = st.file_uploader(
-        "Upload chest X-ray",
-        type=["jpg", "jpeg", "png"],
-        label_visibility="collapsed",
-    )
-
-    if uploaded_file:
-
-        image = Image.open(
-            uploaded_file
-        )
-
-        st.image(
-            image,
-            caption="Uploaded chest X-ray",
-            width=450,
-        )
-
-        if st.button(
-            "Analyze Chest X-ray",
-            use_container_width=True,
-        ):
-
-            with st.spinner(
-                "Analyzing chest X-ray..."
+            if st.button(
+                "Run pneumonia screening"
             ):
 
-                result = predict_xray(
-                    pneumonia_model,
-                    image
+                with st.spinner(
+                    "Reviewing image..."
+                ):
+
+                    result = predict_xray(
+                        img
+                    )
+
+                st.success(
+                    f"Screening result: {result}"
                 )
 
-            st.markdown(
-                '<div class="result-box">'
-                '<div class="result-label">'
-                'Screening result'
-                '</div>'
-                '<div class="result-value">'
-                + result +
-                '</div>'
-                '<div class="result-text">'
-                'Model accuracy on the project evaluation set: '
-                + XRAY_MODEL_ACCURACY +
-                '. This result is for educational screening '
-                'and should not be used as a medical diagnosis.'
-                '</div>'
-                '</div>',
-                unsafe_allow_html=True,
+        else:
+
+            st.info(
+                "Your uploaded image preview and "
+                "screening result will appear here."
             )
 
 
-# ============================================================
+# =========================================================
 # SKIN CANCER
-# ============================================================
+# =========================================================
 
-elif selected_page == "Skin Cancer":
-
-    st.markdown(
-        '<div class="page-kicker">IMAGE SCREENING</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        '<div class="page-title">Skin Lesion Screening</div>',
-        unsafe_allow_html=True,
-    )
+elif module == "Skin Cancer":
 
     st.markdown(
         """
-        <div class="page-description">
-            Upload a skin lesion image to classify it into
-            one of the trained skin-condition categories.
+        <div class="page-kicker">
+            Image screening
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    uploaded_file = st.file_uploader(
-        "Upload skin lesion image",
-        type=["jpg", "jpeg", "png"],
-        label_visibility="collapsed",
+    st.markdown(
+        """
+        <h1 class="page-title">
+            Skin lesion review
+        </h1>
+        """,
+        unsafe_allow_html=True,
     )
 
-    if uploaded_file:
+    st.markdown(
+        """
+        <p class="page-copy">
+            Upload a clear image of a skin lesion to
+            receive a classification from the skin model.
+        </p>
+        """,
+        unsafe_allow_html=True,
+    )
 
-        image = Image.open(
-            uploaded_file
+    upload_col, preview_col = st.columns(
+        [0.9, 1.1],
+        gap="large"
+    )
+
+    with upload_col:
+
+        uploaded_file = st.file_uploader(
+            "Upload skin lesion image",
+            type=[
+                "jpg",
+                "png",
+                "jpeg",
+            ],
+            help="Accepted formats: JPG, PNG, JPEG.",
         )
 
-        st.image(
-            image,
-            caption="Uploaded skin lesion image",
-            width=450,
+        st.markdown(
+            """
+            <div class="quiet-note">
+                A clear, close, evenly lit image produces
+                the most useful screening output. Seek
+                clinical advice for any changing or
+                concerning lesion.
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
-        if st.button(
-            "Analyze Skin Lesion",
-            use_container_width=True,
-        ):
+    with preview_col:
 
-            with st.spinner(
-                "Analyzing skin lesion..."
+        if uploaded_file:
+
+            img = Image.open(
+                uploaded_file
+            )
+
+            st.image(
+                img,
+                caption="Uploaded skin lesion",
+                use_container_width=True,
+            )
+
+            if st.button(
+                "Run skin lesion screening"
             ):
 
-                result = predict_skin(
-                    skin_model,
-                    image
+                with st.spinner(
+                    "Reviewing image..."
+                ):
+
+                    result = predict_skin(
+                        img
+                    )
+
+                st.success(
+                    f"Screening result: {result}"
                 )
 
-            st.markdown(
-                '<div class="result-box">'
-                '<div class="result-label">'
-                'Classification result'
-                '</div>'
-                '<div class="result-value">'
-                + result +
-                '</div>'
-                '<div class="result-text">'
-                'Model accuracy on the project evaluation set: '
-                + SKIN_MODEL_ACCURACY +
-                '. This result is for educational screening '
-                'and should not be used as a medical diagnosis.'
-                '</div>'
-                '</div>',
-                unsafe_allow_html=True,
+        else:
+
+            st.info(
+                "Your uploaded image preview and "
+                "screening result will appear here."
             )
