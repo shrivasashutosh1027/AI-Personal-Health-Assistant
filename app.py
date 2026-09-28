@@ -462,24 +462,10 @@ header {
    SIDEBAR BEHAVIOR
    ========================================================= */
 
-/*
-   LAPTOP / DESKTOP:
-   Sidebar stays permanently open.
-
-   MOBILE:
-   Sidebar can be opened and closed.
-   When closed, a fixed open button remains visible outside
-   the sidebar so the user can bring the sidebar back.
-*/
-
-
-/* ---------------------------------------------------------
-   LAPTOP / DESKTOP
-   --------------------------------------------------------- */
+/* Laptop: permanently open. Mobile: native Streamlit toggle remains available. */
 
 @media (min-width: 701px) {
-
-    section[data-testid="stSidebar"] {
+    [data-testid="stSidebar"] {
         transform: translateX(0) !important;
         visibility: visible !important;
         width: 340px !important;
@@ -487,7 +473,7 @@ header {
         max-width: 340px !important;
     }
 
-    section[data-testid="stSidebar"] > div {
+    [data-testid="stSidebar"] > div:first-child {
         width: 340px !important;
     }
 
@@ -496,188 +482,104 @@ header {
     [data-testid="stSidebarCollapsedControl"],
     [data-testid="collapsedControl"] {
         display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
     }
 }
 
-
-/* ---------------------------------------------------------
-   MOBILE
-   --------------------------------------------------------- */
-
 @media (max-width: 700px) {
-
-    /*
-       The close button remains Streamlit's native button.
-    */
-
-    [data-testid="stSidebarCollapseButton"] {
-        z-index: 999999 !important;
-    }
-
-    [data-testid="stSidebarCollapseButton"] button {
-        width: 40px !important;
-        height: 40px !important;
-        min-width: 40px !important;
-        min-height: 40px !important;
-
-        padding: 0 !important;
-        margin: 0 !important;
-
-        background: var(--green-dark) !important;
-        color: #ffffff !important;
-
-        border: 1px solid #5c8f87 !important;
-        border-radius: 7px !important;
-
-        box-shadow: none !important;
-        outline: none !important;
-    }
-
-
-    /*
-       IMPORTANT:
-       When the sidebar is closed, Streamlit's native
-       expand control is moved outside the sidebar and
-       kept fixed on the screen.
-    */
-
-    [data-testid="stExpandSidebarButton"],
-    [data-testid="stSidebarCollapsedControl"],
-    [data-testid="collapsedControl"] {
-        z-index: 2147483647 !important;
-    }
-
-    [data-testid="stExpandSidebarButton"],
-    [data-testid="stSidebarCollapsedControl"],
-    [data-testid="collapsedControl"] {
-        position: fixed !important;
-        top: 12px !important;
-        left: 12px !important;
-
+    /* The native Streamlit header must remain available because the
+       collapsed-sidebar open control is rendered there. */
+    header[data-testid="stHeader"],
+    [data-testid="stHeader"] {
         display: block !important;
         visibility: visible !important;
         opacity: 1 !important;
-
+        z-index: 999999 !important;
         pointer-events: auto !important;
+        background: transparent !important;
     }
 
-
-    /*
-       If the sidebar is open, hide the outside open button.
-       The native close button inside the sidebar remains.
-    */
-
-    body:has(section[data-testid="stSidebar"][aria-expanded="true"])
-    [data-testid="stExpandSidebarButton"],
-    body:has(section[data-testid="stSidebar"][aria-expanded="true"])
+    /* Closed sidebar: keep every native expand-control variant visible. */
     [data-testid="stSidebarCollapsedControl"],
-    body:has(section[data-testid="stSidebar"][aria-expanded="true"])
-    [data-testid="collapsedControl"] {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
+    [data-testid="collapsedControl"],
+    [data-testid="stExpandSidebarButton"] {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        z-index: 2147483647 !important;
     }
 
-
-    /*
-       Open button styling.
-    */
-
-    [data-testid="stExpandSidebarButton"] button,
     [data-testid="stSidebarCollapsedControl"] button,
-    [data-testid="collapsedControl"] button {
+    [data-testid="collapsedControl"] button,
+    [data-testid="stExpandSidebarButton"] button,
+    [data-testid="stSidebarCollapseButton"] button {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        align-items: center !important;
+        justify-content: center !important;
         width: 40px !important;
         height: 40px !important;
         min-width: 40px !important;
         min-height: 40px !important;
-
         padding: 0 !important;
         margin: 0 !important;
-
         background: var(--green-dark) !important;
         color: #ffffff !important;
-
         border: 1px solid #5c8f87 !important;
         border-radius: 7px !important;
-
         box-shadow: none !important;
         outline: none !important;
-
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
     }
 
+    /* Open sidebar: keep the native close button visible. */
+    [data-testid="stSidebarCollapseButton"] {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 2147483647 !important;
+    }
 
-    /*
-       Hover.
-    */
+    [data-testid="stSidebarCollapseButton"] button svg,
+    [data-testid="stSidebarCollapsedControl"] button svg,
+    [data-testid="collapsedControl"] button svg,
+    [data-testid="stExpandSidebarButton"] button svg {
+        width: 20px !important;
+        height: 20px !important;
+        color: #ffffff !important;
+        fill: #ffffff !important;
+        stroke: #ffffff !important;
+        opacity: 1 !important;
+    }
 
     [data-testid="stSidebarCollapseButton"] button:hover,
-    [data-testid="stExpandSidebarButton"] button:hover,
     [data-testid="stSidebarCollapsedControl"] button:hover,
-    [data-testid="collapsedControl"] button:hover {
+    [data-testid="collapsedControl"] button:hover,
+    [data-testid="stExpandSidebarButton"] button:hover {
         background: var(--teal-dark) !important;
         border-color: #82b6ad !important;
     }
 
-
-    /*
-       Focus.
-    */
-
     [data-testid="stSidebarCollapseButton"] button:focus,
-    [data-testid="stExpandSidebarButton"] button:focus,
     [data-testid="stSidebarCollapsedControl"] button:focus,
-    [data-testid="collapsedControl"] button:focus {
+    [data-testid="collapsedControl"] button:focus,
+    [data-testid="stExpandSidebarButton"] button:focus {
         outline: none !important;
         box-shadow: none !important;
     }
-
-
-    /*
-       Icons.
-    */
-
-    [data-testid="stSidebarCollapseButton"] button svg,
-    [data-testid="stExpandSidebarButton"] button svg,
-    [data-testid="stSidebarCollapsedControl"] button svg,
-    [data-testid="collapsedControl"] button svg {
-        width: 20px !important;
-        height: 20px !important;
-
-        color: #ffffff !important;
-        fill: #ffffff !important;
-        stroke: #ffffff !important;
-
-        opacity: 1 !important;
-    }
 }
 
-
-/* ---------------------------------------------------------
-   VERY SMALL MOBILE SCREENS
-   --------------------------------------------------------- */
-
 @media (max-width: 400px) {
-
     [data-testid="stSidebarCollapseButton"] button,
-    [data-testid="stExpandSidebarButton"] button,
     [data-testid="stSidebarCollapsedControl"] button,
-    [data-testid="collapsedControl"] button {
-
+    [data-testid="collapsedControl"] button,
+    [data-testid="stExpandSidebarButton"] button {
         width: 38px !important;
         height: 38px !important;
-
         min-width: 38px !important;
         min-height: 38px !important;
     }
 }
-
 
 /* =========================================================
    PAGE TYPOGRAPHY
@@ -1271,18 +1173,6 @@ svg {
         min-width: min(86vw, 18rem) !important;
     }
 
-    [data-testid="stSidebarCollapseButton"] button,
-    [data-testid="stExpandSidebarButton"] button,
-    [data-testid="stSidebarCollapsedControl"] button,
-    [data-testid="collapsedControl"] button {
-        width: 40px !important;
-
-        height: 40px !important;
-
-        min-width: 40px !important;
-
-        min-height: 40px !important;
-    }
 }
 
 </style>
