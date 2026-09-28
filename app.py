@@ -549,6 +549,36 @@ header {
         left: 10px !important;
     }
 
+    /* Mobile hamburger: replace the native arrow with three white lines. */
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stExpandSidebarButton"] button,
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="stSidebarCollapsedControl"] button,
+    [data-testid="collapsedControl"],
+    [data-testid="collapsedControl"] button,
+    [data-testid="stBaseButton-headerNoPadding"] {
+        background-image:
+            linear-gradient(#ffffff, #ffffff),
+            linear-gradient(#ffffff, #ffffff),
+            linear-gradient(#ffffff, #ffffff) !important;
+        background-repeat: no-repeat !important;
+        background-size: 18px 2px !important;
+        background-position:
+            center 11px,
+            center 19px,
+            center 27px !important;
+    }
+
+    [data-testid="stExpandSidebarButton"] svg,
+    [data-testid="stExpandSidebarButton"] button svg,
+    [data-testid="stSidebarCollapsedControl"] svg,
+    [data-testid="stSidebarCollapsedControl"] button svg,
+    [data-testid="collapsedControl"] svg,
+    [data-testid="collapsedControl"] button svg,
+    [data-testid="stBaseButton-headerNoPadding"] svg {
+        display: none !important;
+    }
+
     /* The actual Streamlit button can be the testid itself or a child. */
     [data-testid="stExpandSidebarButton"],
     [data-testid="stExpandSidebarButton"] button,
@@ -1244,6 +1274,10 @@ svg {
 
     [data-testid="stAppViewContainer"] > .main {
         padding-top: 3.1rem;
+    }
+
+    .page-kicker {
+        padding-left: 2.7rem;
     }
 
     .page-title {
