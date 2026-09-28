@@ -601,12 +601,26 @@ header {
     }
 
     [data-testid="stExpandSidebarButton"] button svg,
+    [data-testid="stExpandSidebarButton"] svg,
     [data-testid="stSidebarCollapsedControl"] button svg,
+    [data-testid="stSidebarCollapsedControl"] svg,
     [data-testid="collapsedControl"] button svg,
+    [data-testid="collapsedControl"] svg,
     [data-testid="stBaseButton-headerNoPadding"] svg,
     [data-testid="stSidebarCollapseButton"] button svg {
         width: 20px !important;
         height: 20px !important;
+        color: #ffffff !important;
+        fill: #ffffff !important;
+        stroke: #ffffff !important;
+        opacity: 1 !important;
+    }
+
+    [data-testid="stExpandSidebarButton"] svg *,
+    [data-testid="stSidebarCollapsedControl"] svg *,
+    [data-testid="collapsedControl"] svg *,
+    [data-testid="stBaseButton-headerNoPadding"] svg *,
+    [data-testid="stSidebarCollapseButton"] button svg * {
         color: #ffffff !important;
         fill: #ffffff !important;
         stroke: #ffffff !important;
@@ -1229,7 +1243,7 @@ svg {
     }
 
     [data-testid="stAppViewContainer"] > .main {
-        padding-top: 0.8rem;
+        padding-top: 3.1rem;
     }
 
     .page-title {
